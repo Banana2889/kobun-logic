@@ -195,3 +195,4 @@ elif st.session_state.app_mode == 'complete':
     if st.button("最初に戻る"):
         st.session_state.clear()
         st.rerun()
+    if st.button("最初に戻る"): st.session_state.clear(); st.rerun()
