@@ -10,7 +10,6 @@ st.set_page_config(page_title="古文ロジック・恋愛抄 ～義経伝・極
 
 IMAGE_DIR = "kobungazou"
 
-# 調査用カテゴリ
 CATEGORIES = [
     "古文の単語や文法を学ぶことに関してどう思いますか",
     "古文の内容理解に関してどう思いますか",
@@ -60,18 +59,19 @@ if 'app_mode' not in st.session_state:
         'pre_likert': {q: 3 for q in PRE_LIKERT_QUESTIONS},
         'post_ratings': {cat: 3 for cat in CATEGORIES},
         'post_likert': {q: 3 for q in POST_LIKERT_QUESTIONS},
+        'post_feedback_text': "", # 改善点用
         'stage': 0, 'answered': False, 'results': [], 'stage_start_time': 0,
         'last_feedback': "", 'last_correct': False, 'current_options': []
     })
 
-# --- 5. 問題データ ---
+# --- 5. 問題データ (省略なし) ---
 scenes = [
     {"title": "第1章：闇夜の決意", "context": "平家全盛の世。修行の裏で密かに一族の再興を期して牙を研ぎ続ける。", "options": [{"text": "「昼は寺に読経し、夜は貴船の奥にのぼりて、兵法をぞ習ひける」", "correct": True, "feedback": "【正解】夜な夜な兵法に励む姿が目に浮かびます。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ習いおはします」", "correct": False, "feedback": "【失敗】自らの動作に最高敬語は不適切です。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ教えさせ給ふ」", "correct": False, "feedback": "【失敗】教えを乞う立場であり、教える側ではございませぬ。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ遊びおはす」", "correct": False, "feedback": "【失敗】修行は遊びではございませぬ。"}]},
     {"title": "第2章：兄弟の再会", "context": "挙兵した兄の元へ駆けつけた場面。一族の悲願を果たすため、忠義を誓う。", "options": [{"text": "「御前に畏まりて、九郎義経、参り候ふ」", "correct": True, "feedback": "【正解】頼朝への深い敬意と忠誠心が伝わります。"}, {"text": "「御前に畏まりて、九郎義経、参り給ふ」", "correct": False, "feedback": "【失敗】己の参上に尊敬語は不要です。"}, {"text": "「御前に畏まりて、九郎義経、来たり候ふ」", "correct": False, "feedback": "【失敗】「参る」が最も相応しいでしょう。"}, {"text": "「御前に畏まりて、九郎義経、見えさせ給ふ」", "correct": False, "feedback": "【失敗】敬語の使い方が不自然です。"}]},
     {"title": "第3章：激流を越えて", "context": "水の流れを突破しなければならない。自ら最前線へ。", "options": [{"text": "「まっさきに喚いて、宇治川の早瀬をぞ押し渡り給ふ」", "correct": True, "feedback": "【正解】勇猛果敢な姿が見事に描かれています。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞ渡りおはします」", "correct": False, "feedback": "【失敗】「給ふ」が最も勢いがあります。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞ見送り給ふ」", "correct": False, "feedback": "【失敗】見送っていては勝利は掴めませぬ。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞなぶり給ふ」", "correct": False, "feedback": "【失敗】不適切な表現です。"}]},
     {"title": "第4章：絶壁の奇襲", "context": "敵陣に対し、誰も予想しない険しい地形から一気に攻め下る。", "options": [{"text": "「義経、三十騎ばかりを率て、真っ逆様におとし給ふ」", "correct": True, "feedback": "【正解】鵯越の奇襲、お見事です。"}, {"text": "「三十騎ばかりを率て、おとしおはします」", "correct": False, "feedback": "【失敗】「給ふ」が相応しい場面です。"}, {"text": "「三十騎ばかりを率て、山陰に隠れ給ふ」", "correct": False, "feedback": "【失敗】奇襲になりませぬ。"}, {"text": "「三十騎ばかりを率て、見守り給ふ」", "correct": False, "feedback": "【失敗】勝利は得られませぬ。"}]},
     {"title": "第5章：嵐の船出", "context": "荒れる海を前に、厳しい条件を利用して敵の意表を突く。", "options": [{"text": "「追い風なればこそ、船をば出だすなれ」", "correct": True, "feedback": "【正解】これぞ義経の真骨頂。"}, {"text": "「追い風なればこそ、船をば出ださせ給ふ」", "correct": False, "feedback": "【失敗】強意「なれ」が相応しいです。"}, {"text": "「追い風なればこそ、船をば留むるなれ」", "correct": False, "feedback": "【失敗】機を逃します。"}, {"text": "「追い風なればこそ、船をば弄び給ふ」", "correct": False, "feedback": "【失敗】不真面目な印象です。"}]},
-    {"title": "第6章：誇りの回収", "context": "戦いの最中、弓を落としてしまう。敵の嘲笑を防ぐため自ら動く。", "options": [{"text": "「鞭をもって、弓をかき寄せ、ついに取りてぞ帰り給ふ」", "correct": True, "feedback": "【正解】弓流し。誇りを守り抜く執念です。"}, {"text": "「鞭をもって、弓を打ち捨て、ついに取りてぞ帰り給ふ」", "correct": False, "feedback": "【失敗】嘲笑の的になります。"}, {"text": "「鞭をもって、弓を拾い取らせ給ふ」", "correct": False, "feedback": "【失敗】自らの手で取り戻すことに意味があります。"}, {"text": "「鞭をもって、弓を笑いおはします」", "correct": False, "feedback": "【失敗】笑っている場合ではございませぬ。"}]},
+    {"title": "第6章：誇りの回収", "context": "戦いの最中、弓を落としてしまう。敵の嘲笑を防ぐため自ら動く。", "options": [{"text": "「鞭をもって、弓をかき寄せ、ついに取りてぞ帰り給ふ」", "correct": True, "feedback": "【正解】弓流し。誇りを守り抜く執念です。"}, {"text": "「鞭をもって、弓を打ち捨て、ついに取りてぞ帰り給ふ」", "correct": False, "feedback": "【失敗】嘲笑の目になります。"}, {"text": "「鞭をもって、弓を拾い取らせ給ふ」", "correct": False, "feedback": "【失敗】自らの手で取り戻すことに意味があります。"}, {"text": "「鞭をもって、弓を笑いおはします」", "correct": False, "feedback": "【失敗】笑っている場合ではございませぬ。"}]},
     {"title": "第7章：非情の采配", "context": "敵の機動力を奪うため、船を操る者たちを射るよう命じる。", "options": [{"text": "「あやまちすな、水手・梶取を射よ」", "correct": True, "feedback": "【正解】非情ながら勝利を決定づける采配です。"}, {"text": "「あやまちすな、水手・梶取を射させ給ふ」", "correct": False, "feedback": "【失敗】軍の緊張感を表します。"}, {"text": "「あやまちすな、水手・梶取を助けよ」", "correct": False, "feedback": "【失敗】敵を止められませぬ。"}, {"text": "「あやまちすな、水手・梶取をなぶり殺せ」", "correct": False, "feedback": "【失敗】残酷すぎます。"}]},
     {"title": "第8章：窮地の跳躍", "context": "敵が迫る。身の軽さを活かして瞬時に距離を取る。", "options": [{"text": "「ゆらりと飛びのき、二丈ばかりの船のわたりを、飛びわたり給ふ」", "correct": True, "feedback": "【正解】八艘飛び、お見事。"}, {"text": "「ゆらりと飛びのきおはし、船のわたりをわたり給ふ」", "correct": False, "feedback": "【失敗】勢いが削がれます。"}, {"text": "「ゆらりと踏みとどまり、船のわたりを飛びわたり給ふ」", "correct": False, "feedback": "【失敗】捕まってしまいます。"}, {"text": "「ゆらりと立ち止まり給ひ、船のわたりを眺め給ふ」", "correct": False, "feedback": "【失敗】眺めている暇はございませぬ。"}]},
     {"title": "第9章：偽装の忍耐", "context": "正体を隠して関所を抜ける場面。仲間からの打擲に耐えて去る。", "options": [{"text": "「義経、杖を突いて、山伏の態にて、急ぎ通り給ふ」", "correct": True, "feedback": "【正解】安宅の関、緊迫の場面です。"}, {"text": "「義経、杖を突いて、山伏の態にて、歩ませ給ふ」", "correct": False, "feedback": "【失敗】急ぐことが肝要です。"}, {"text": "「義経、杖を突いて、山伏の態にて、物申し給ふ」", "correct": False, "feedback": "【失敗】怪しまれます。"}, {"text": "「義経、杖を突いて、山伏の態にて、命じ給ふ」", "correct": False, "feedback": "【失敗】不自然な振る舞いです。"}]},
@@ -80,21 +80,18 @@ scenes = [
 
 # --- 6. 画面進行 ---
 
-# 使い方説明画面
+# 使い方説明
 if st.session_state.app_mode == 'instruction':
-    col1, col2, col3 = st.columns([1, 8, 1])
-    with col1:
-        if st.button("⬅️ 戻る"):
-            st.session_state.app_mode = 'pre_mapping'
-            st.rerun()
+    if st.button("⬅️ 戻る"):
+        st.session_state.app_mode = 'pre_mapping'
+        st.rerun()
     st.markdown("""<div class="instruction-text">このアプリは古文の学習アプリだよ！<br><br>状況説明、画像、選択肢が表示されるよ。画像の少年が主人公！選択肢には敬語や単語のミスが混ざってるから気をつけてね。<br><br>くそアプリだけど頑張ってね！！</div>""", unsafe_allow_html=True)
 
 # 事前調査
 elif st.session_state.app_mode == 'pre_mapping':
     st.title("🎎 古文ロジック ～事前調査～")
-    if st.button("📖 使い方説明（初めての人は見てね）"):
-        st.session_state.app_mode = 'instruction'
-        st.rerun()
+    if st.button("📖 使い方説明"):
+        st.session_state.app_mode = 'instruction'; st.rerun()
 
     with st.form("pre_form"):
         st.subheader("📊 認識調査（5段階）")
@@ -103,9 +100,7 @@ elif st.session_state.app_mode == 'pre_mapping':
         for q in PRE_LIKERT_QUESTIONS:
             st.session_state.pre_likert[q] = st.select_slider(q, options=[1, 2, 3, 4, 5], value=3)
         if st.form_submit_button("物語へ進む"):
-            st.session_state.app_mode = 'game'
-            st.session_state.stage_start_time = time.perf_counter()
-            st.rerun()
+            st.session_state.app_mode = 'game'; st.session_state.stage_start_time = time.perf_counter(); st.rerun()
 
 # ゲーム本編
 elif st.session_state.app_mode == 'game':
@@ -116,7 +111,6 @@ elif st.session_state.app_mode == 'game':
     st.header(f"✨ {scene['title']}")
     st.progress(st.session_state.stage / 10)
     st.info(f"📜 状況: {scene['context']}")
-    
     img_name = f"gazou{st.session_state.stage + 1}.png"
     img_path = os.path.join(IMAGE_DIR, img_name)
     if os.path.exists(img_path): st.image(img_path, width=700)
@@ -130,13 +124,12 @@ elif st.session_state.app_mode == 'game':
                 if 'correct_count' not in st.session_state: st.session_state['correct_count'] = 0
                 if sel['correct']: st.session_state['correct_count'] += 1
                 st.session_state.update({'answered': True, 'last_correct': sel['correct'], 'last_feedback': sel['feedback']})
-                inject_result_animation(sel['correct'])
-                st.rerun()
+                inject_result_animation(sel['correct']); st.rerun()
     else:
         if st.session_state.last_correct: st.success(st.session_state.last_feedback)
         else: st.error(st.session_state.last_feedback)
         if st.button("次へ"):
-            if st.session_state.stage < 9: 
+            if st.session_state.stage < 9:
                 st.session_state.update({'stage': st.session_state.stage+1, 'answered': False, 'current_options': [], 'stage_start_time': time.perf_counter()})
             else: st.session_state.app_mode = 'post_mapping'
             st.rerun()
@@ -151,9 +144,11 @@ elif st.session_state.app_mode == 'post_mapping':
         for q in POST_LIKERT_QUESTIONS:
             st.session_state.post_likert[q] = st.select_slider(q, options=[1, 2, 3, 4, 5], value=3)
         
+        st.subheader("🖋️ アプリの改善点や感想")
+        st.session_state.post_feedback_text = st.text_area("このアプリをより良くするためのアドバイスを教えてください", height=100)
+        
         if st.form_submit_button("結果を表示する"):
-            st.session_state.app_mode = 'complete'
-            st.rerun()
+            st.session_state.app_mode = 'complete'; st.rerun()
 
 # 完了画面（スクショ用）
 elif st.session_state.app_mode == 'complete':
@@ -166,36 +161,45 @@ elif st.session_state.app_mode == 'complete':
     score = st.session_state.get('correct_count', 0)
     st.metric(label="合計正解数", value=f"{score} / 10")
 
+    # 前後比較の表示
+    st.write("### 📈 アンケート結果の比較 (左: 事前 → 右: 事後)")
+    for cat in CATEGORIES:
+        pre = st.session_state.pre_ratings[cat]
+        post = st.session_state.post_ratings[cat]
+        st.write(f"**{cat}**")
+        st.write(f"結果: {pre} ➔ **{post}**")
+
+    st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
         st.write("⏱️ **解答時間**")
         for i, duration in enumerate(st.session_state.results):
             st.write(f"第{i+1}章: {duration:.2f} 秒")
     with col2:
-        st.write("📝 **アンケート回答**")
-        for q, val in st.session_state.post_likert.items():
-            st.write(f"・{q}: **{val}**")
-        for cat, val in st.session_state.post_ratings.items():
-            st.write(f"・{cat[:8]}...: **{val}**")
+        st.write("📝 **その他の回答**")
+        for q in POST_LIKERT_QUESTIONS:
+            st.write(f"・{q}: **{st.session_state.post_likert[q]}**")
+        st.write(f"・改善点: {st.session_state.post_feedback_text}")
 
     st.markdown("---")
-    
-    # ここで初めて「保存」を試みる
     if st.button("データを送信して終了（スクショを撮った後に押してね）"):
         now = time.strftime("%Y-%m-%d %H:%M:%S")
         try:
             existing_df = conn.read(worksheet="Sheet1", ttl=0)
             cols = existing_df.columns.tolist()
+            # 保存データ作成 (改善点テキストも含む)
             pre_dict = {c: "-" for c in cols}
             pre_dict.update({"日時": now, "タイプ": "事前", **st.session_state.pre_ratings, **st.session_state.pre_likert})
             post_dict = {c: "-" for c in cols}
-            post_dict.update({"日時": now, "タイプ": "事後", **st.session_state.post_ratings, **st.session_state.post_likert, "ログ": str(st.session_state.results)})
+            post_dict.update({
+                "日時": now, "タイプ": "事後", 
+                **st.session_state.post_ratings, 
+                **st.session_state.post_likert, 
+                "ログ": str(st.session_state.results),
+                "改善点": st.session_state.post_feedback_text # 列名「改善点」がシートにある前提
+            })
             new_df = pd.DataFrame([pre_dict, post_dict])[cols]
-            updated_df = pd.concat([existing_df, new_df], ignore_index=True)
-            conn.update(worksheet="Sheet1", data=updated_df)
-            st.success("✅ データが送信されました。ありがとうございました！")
-            time.sleep(2)
-            st.session_state.clear()
-            st.rerun()
+            conn.update(worksheet="Sheet1", data=pd.concat([existing_df, new_df], ignore_index=True))
+            st.success("✅ データが送信されました。"); time.sleep(2); st.session_state.clear(); st.rerun()
         except Exception as e:
-            st.error(f"送信に失敗しましたが、スクショがあれば大丈夫です！そのままブラウザを閉じてください。")
+            st.error("送信に失敗しましたが、スクショがあれば大丈夫です！ブラウザを閉じてください。")
