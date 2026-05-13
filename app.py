@@ -59,23 +59,25 @@ if 'app_mode' not in st.session_state:
         'pre_likert': {q: 3 for q in PRE_LIKERT_QUESTIONS},
         'post_ratings': {cat: 3 for cat in CATEGORIES},
         'post_likert': {q: 3 for q in POST_LIKERT_QUESTIONS},
-        'post_feedback_text': "", # 改善点用
+        'post_feedback_text': "",
         'stage': 0, 'answered': False, 'results': [], 'stage_start_time': 0,
-        'last_feedback': "", 'last_correct': False, 'current_options': []
+        'last_feedback': "", 'last_correct': False, 'current_options': [],
+        'correct_count': 0, 'wrong_count': 0, 'continuous_wrong': 0, # カウント用
+        'show_hint': False, 'ending_type': 0 # ヒント状態とエンディング分岐用
     })
 
-# --- 5. 問題データ (省略なし) ---
+# --- 5. 問題データ (ヒント追加) ---
 scenes = [
-    {"title": "第1章：闇夜の決意", "context": "平家全盛の世。修行の裏で密かに一族の再興を期して牙を研ぎ続ける。", "options": [{"text": "「昼は寺に読経し、夜は貴船の奥にのぼりて、兵法をぞ習ひける」", "correct": True, "feedback": "【正解】夜な夜な兵法に励む姿が目に浮かびます。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ習いおはします」", "correct": False, "feedback": "【失敗】自らの動作に最高敬語は不適切です。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ教えさせ給ふ」", "correct": False, "feedback": "【失敗】教えを乞う立場であり、教える側ではございませぬ。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ遊びおはす」", "correct": False, "feedback": "【失敗】修行は遊びではございませぬ。"}]},
-    {"title": "第2章：兄弟の再会", "context": "挙兵した兄の元へ駆けつけた場面。一族の悲願を果たすため、忠義を誓う。", "options": [{"text": "「御前に畏まりて、九郎義経、参り候ふ」", "correct": True, "feedback": "【正解】頼朝への深い敬意と忠誠心が伝わります。"}, {"text": "「御前に畏まりて、九郎義経、参り給ふ」", "correct": False, "feedback": "【失敗】己の参上に尊敬語は不要です。"}, {"text": "「御前に畏まりて、九郎義経、来たり候ふ」", "correct": False, "feedback": "【失敗】「参る」が最も相応しいでしょう。"}, {"text": "「御前に畏まりて、九郎義経、見えさせ給ふ」", "correct": False, "feedback": "【失敗】敬語の使い方が不自然です。"}]},
-    {"title": "第3章：激流を越えて", "context": "水の流れを突破しなければならない。自ら最前線へ。", "options": [{"text": "「まっさきに喚いて、宇治川の早瀬をぞ押し渡り給ふ」", "correct": True, "feedback": "【正解】勇猛果敢な姿が見事に描かれています。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞ渡りおはします」", "correct": False, "feedback": "【失敗】「給ふ」が最も勢いがあります。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞ見送り給ふ」", "correct": False, "feedback": "【失敗】見送っていては勝利は掴めませぬ。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞなぶり給ふ」", "correct": False, "feedback": "【失敗】不適切な表現です。"}]},
-    {"title": "第4章：絶壁の奇襲", "context": "敵陣に対し、誰も予想しない険しい地形から一気に攻め下る。", "options": [{"text": "「義経、三十騎ばかりを率て、真っ逆様におとし給ふ」", "correct": True, "feedback": "【正解】鵯越の奇襲、お見事です。"}, {"text": "「三十騎ばかりを率て、おとしおはします」", "correct": False, "feedback": "【失敗】「給ふ」が相応しい場面です。"}, {"text": "「三十騎ばかりを率て、山陰に隠れ給ふ」", "correct": False, "feedback": "【失敗】奇襲になりませぬ。"}, {"text": "「三十騎ばかりを率て、見守り給ふ」", "correct": False, "feedback": "【失敗】勝利は得られませぬ。"}]},
-    {"title": "第5章：嵐の船出", "context": "荒れる海を前に、厳しい条件を利用して敵の意表を突く。", "options": [{"text": "「追い風なればこそ、船をば出だすなれ」", "correct": True, "feedback": "【正解】これぞ義経の真骨頂。"}, {"text": "「追い風なればこそ、船をば出ださせ給ふ」", "correct": False, "feedback": "【失敗】強意「なれ」が相応しいです。"}, {"text": "「追い風なればこそ、船をば留むるなれ」", "correct": False, "feedback": "【失敗】機を逃します。"}, {"text": "「追い風なればこそ、船をば弄び給ふ」", "correct": False, "feedback": "【失敗】不真面目な印象です。"}]},
-    {"title": "第6章：誇りの回収", "context": "戦いの最中、弓を落としてしまう。敵の嘲笑を防ぐため自ら動く。", "options": [{"text": "「鞭をもって、弓をかき寄せ、ついに取りてぞ帰り給ふ」", "correct": True, "feedback": "【正解】弓流し。誇りを守り抜く執念です。"}, {"text": "「鞭をもって、弓を打ち捨て、ついに取りてぞ帰り給ふ」", "correct": False, "feedback": "【失敗】嘲笑の目になります。"}, {"text": "「鞭をもって、弓を拾い取らせ給ふ」", "correct": False, "feedback": "【失敗】自らの手で取り戻すことに意味があります。"}, {"text": "「鞭をもって、弓を笑いおはします」", "correct": False, "feedback": "【失敗】笑っている場合ではございませぬ。"}]},
-    {"title": "第7章：非情の采配", "context": "敵の機動力を奪うため、船を操る者たちを射るよう命じる。", "options": [{"text": "「あやまちすな、水手・梶取を射よ」", "correct": True, "feedback": "【正解】非情ながら勝利を決定づける采配です。"}, {"text": "「あやまちすな、水手・梶取を射させ給ふ」", "correct": False, "feedback": "【失敗】軍の緊張感を表します。"}, {"text": "「あやまちすな、水手・梶取を助けよ」", "correct": False, "feedback": "【失敗】敵を止められませぬ。"}, {"text": "「あやまちすな、水手・梶取をなぶり殺せ」", "correct": False, "feedback": "【失敗】残酷すぎます。"}]},
-    {"title": "第8章：窮地の跳躍", "context": "敵が迫る。身の軽さを活かして瞬時に距離を取る。", "options": [{"text": "「ゆらりと飛びのき、二丈ばかりの船のわたりを、飛びわたり給ふ」", "correct": True, "feedback": "【正解】八艘飛び、お見事。"}, {"text": "「ゆらりと飛びのきおはし、船のわたりをわたり給ふ」", "correct": False, "feedback": "【失敗】勢いが削がれます。"}, {"text": "「ゆらりと踏みとどまり、船のわたりを飛びわたり給ふ」", "correct": False, "feedback": "【失敗】捕まってしまいます。"}, {"text": "「ゆらりと立ち止まり給ひ、船のわたりを眺め給ふ」", "correct": False, "feedback": "【失敗】眺めている暇はございませぬ。"}]},
-    {"title": "第9章：偽装の忍耐", "context": "正体を隠して関所を抜ける場面。仲間からの打擲に耐えて去る。", "options": [{"text": "「義経、杖を突いて、山伏の態にて、急ぎ通り給ふ」", "correct": True, "feedback": "【正解】安宅の関、緊迫の場面です。"}, {"text": "「義経、杖を突いて、山伏の態にて、歩ませ給ふ」", "correct": False, "feedback": "【失敗】急ぐことが肝要です。"}, {"text": "「義経、杖を突いて、山伏の態にて、物申し給ふ」", "correct": False, "feedback": "【失敗】怪しまれます。"}, {"text": "「義経、杖を突いて、山伏の態にて、命じ給ふ」", "correct": False, "feedback": "【失敗】不自然な振る舞いです。"}]},
-    {"title": "第10章：静かなる終幕", "context": "尊厳を保つため、自ら幕を引く準備を整える。", "options": [{"text": "「持仏堂の戸を強くしめ、内よりかんぬきをさして、自害し給ふ」", "correct": True, "feedback": "【正解】最期まで誇り高き姿、感服いたしました。"}, {"text": "「戸を強くしめ、内よりかんぬきをさして、眠りおはす」", "correct": False, "feedback": "【失敗】眠る場面ではございませぬ。"}, {"text": "「戸を強くしめ、内よりかんぬきをさして、まどひ給ふ」", "correct": False, "feedback": "【失敗】義経公は惑いません。"}, {"text": "「戸を強くしめ、内よりかんぬきをさして、逃げおはします」", "correct": False, "feedback": "【失敗】逃げる道は残されておりませぬ。"}]}
+    {"title": "第1章：闇夜の決意", "context": "平家全盛の世。修行の裏で密かに一族の再興を期して牙を研ぎ続ける。", "hint": "自分の動作を表す際、どのような敬語を使うべきか考えてみましょう。", "options": [{"text": "「昼は寺に読経し、夜は貴船の奥にのぼりて、兵法をぞ習ひける」", "correct": True, "feedback": "【正解】夜な夜な兵法に励む姿が目に浮かびます。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ習いおはします」", "correct": False, "feedback": "【失敗】自らの動作に最高敬語は不適切です。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ教えさせ給ふ」", "correct": False, "feedback": "【失敗】教えを乞う立場であり、教える側ではございませぬ。"}, {"text": "「夜は貴船の奥にのぼりて、兵法をぞ遊びおはす」", "correct": False, "feedback": "【失敗】修行は遊びではございませぬ。"}]},
+    {"title": "第2章：兄弟の再会", "context": "挙兵した兄の元へ駆けつけた場面。一族の悲願を果たすため、忠義を誓う。", "hint": "目上の人に対して自分が参上したことを示す謙譲語を選びましょう。", "options": [{"text": "「御前に畏まりて、九郎義経、参り候ふ」", "correct": True, "feedback": "【正解】頼朝への深い敬意と忠誠心が伝わります。"}, {"text": "「御前に畏まりて、九郎義経、参り給ふ」", "correct": False, "feedback": "【失敗】己の参上に尊敬語は不要です。"}, {"text": "「御前に畏まりて、九郎義経、来たり候ふ」", "correct": False, "feedback": "【失敗】「参る」が最も相応しいでしょう。"}, {"text": "「御前に畏まりて、九郎義経、見えさせ給ふ」", "correct": False, "feedback": "【失敗】敬語の使い方が不自然です。"}]},
+    {"title": "第3章：激流を越えて", "context": "水の流れを突破しなければならない。自ら最前線へ。", "hint": "先陣を切る勇ましい行動にふさわしい尊敬表現はどれでしょうか。", "options": [{"text": "「まっさきに喚いて、宇治川の早瀬をぞ押し渡り給ふ」", "correct": True, "feedback": "【正解】勇猛果敢な姿が見事に描かれています。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞ渡りおはします」", "correct": False, "feedback": "【失敗】「給ふ」が最も勢いがあります。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞ見送り給ふ」", "correct": False, "feedback": "【失敗】見送っていては勝利は掴めませぬ。"}, {"text": "「まっさきに喚いて、宇治川の早瀬をぞなぶり給ふ」", "correct": False, "feedback": "【失敗】不適切な表現です。"}]},
+    {"title": "第4章：絶壁の奇襲", "context": "敵陣に対し、誰も予想しない険しい地形から一気に攻め下る。", "hint": "自ら崖を駆け下りる躍動感と勢いを示す尊敬語を選んでみてください。", "options": [{"text": "「義経、三十騎ばかりを率て、真っ逆様におとし給ふ」", "correct": True, "feedback": "【正解】鵯越の奇襲、お見事です。"}, {"text": "「三十騎ばかりを率て、おとしおはします」", "correct": False, "feedback": "【失敗】「給ふ」が相応しい場面です。"}, {"text": "「三十騎ばかりを率て、山陰に隠れ給ふ」", "correct": False, "feedback": "【失敗】奇襲になりませぬ。"}, {"text": "「三十騎ばかりを率て、見守り給ふ」", "correct": False, "feedback": "【失敗】勝利は得られませぬ。"}]},
+    {"title": "第5章：嵐の船出", "context": "荒れる海を前に、厳しい条件を利用して敵の意表を突く。", "hint": "「〜であるからこそ」と強調する係り結びの法則に注目しましょう。", "options": [{"text": "「追い風なればこそ、船をば出だすなれ」", "correct": True, "feedback": "【正解】これぞ義経の真骨頂。"}, {"text": "「追い風なればこそ、船をば出ださせ給ふ」", "correct": False, "feedback": "【失敗】強意「なれ」が相応しいです。"}, {"text": "「追い風なればこそ、船をば留むるなれ」", "correct": False, "feedback": "【失敗】機を逃します。"}, {"text": "「追い風なればこそ、船をば弄び給ふ」", "correct": False, "feedback": "【失敗】不真面目な印象です。"}]},
+    {"title": "第6章：誇りの回収", "context": "戦いの最中、弓を落としてしまう。敵の嘲笑を防ぐため自ら動く。", "hint": "自らの手で弓を回収する執念が伝わる表現を選びましょう。", "options": [{"text": "「鞭をもって、弓をかき寄せ、ついに取りてぞ帰り給ふ」", "correct": True, "feedback": "【正解】弓流し。誇りを守り抜く執念です。"}, {"text": "「鞭をもって、弓を打ち捨て、ついに取りてぞ帰り給ふ」", "correct": False, "feedback": "【失敗】嘲笑の目になります。"}, {"text": "「鞭をもって、弓を拾い取らせ給ふ」", "correct": False, "feedback": "【失敗】自らの手で取り戻すことに意味があります。"}, {"text": "「鞭をもって、弓を笑いおはします」", "correct": False, "feedback": "【失敗】笑っている場合ではございませぬ。"}]},
+    {"title": "第7章：非情の采配", "context": "敵の機動力を奪うため、船を操る者たちを射るよう命じる。", "hint": "部下に対する切羽詰まった強い命令を表す形はどれでしょうか。", "options": [{"text": "「あやまちすな、水手・梶取を射よ」", "correct": True, "feedback": "【正解】非情ながら勝利を決定づける采配です。"}, {"text": "「あやまちすな、水手・梶取を射させ給ふ」", "correct": False, "feedback": "【失敗】軍の緊張感を表します。"}, {"text": "「あやまちすな、水手・梶取を助けよ」", "correct": False, "feedback": "【失敗】敵を止められませぬ。"}, {"text": "「あやまちすな、水手・梶取をなぶり殺せ」", "correct": False, "feedback": "【失敗】残酷すぎます。"}]},
+    {"title": "第8章：窮地の跳躍", "context": "敵が迫る。身の軽さを活かして瞬時に距離を取る。", "hint": "素早く身軽に飛び移る動作にふさわしい尊敬語を見つけましょう。", "options": [{"text": "「ゆらりと飛びのき、二丈ばかりの船のわたりを、飛びわたり給ふ」", "correct": True, "feedback": "【正解】八艘飛び、お見事。"}, {"text": "「ゆらりと飛びのきおはし、船のわたりをわたり給ふ」", "correct": False, "feedback": "【失敗】勢いが削がれます。"}, {"text": "「ゆらりと踏みとどまり、船のわたりを飛びわたり給ふ」", "correct": False, "feedback": "【失敗】捕まってしまいます。"}, {"text": "「ゆらりと立ち止まり給ひ、船のわたりを眺め給ふ」", "correct": False, "feedback": "【失敗】眺めている暇はございませぬ。"}]},
+    {"title": "第9章：偽装の忍耐", "context": "正体を隠して関所を抜ける場面。仲間からの打擲に耐えて去る。", "hint": "一刻を争う緊迫した状況を示す動作を選んでみてください。", "options": [{"text": "「義経、杖を突いて、山伏の態にて、急ぎ通り給ふ」", "correct": True, "feedback": "【正解】安宅の関、緊迫の場面です。"}, {"text": "「義経、杖を突いて、山伏の態にて、歩ませ給ふ」", "correct": False, "feedback": "【失敗】急ぐことが肝要です。"}, {"text": "「義経、杖を突いて、山伏の態にて、物申し給ふ」", "correct": False, "feedback": "【失敗】怪しまれます。"}, {"text": "「義経、杖を突いて、山伏の態にて、命じ給ふ」", "correct": False, "feedback": "【失敗】不自然な振る舞いです。"}]},
+    {"title": "第10章：静かなる終幕", "context": "尊厳を保つため、自ら幕を引く準備を整える。", "hint": "最期まで武士としての誇りを保つ、ふさわしい尊敬語はどれでしょう。", "options": [{"text": "「持仏堂の戸を強くしめ、内よりかんぬきをさして、自害し給ふ」", "correct": True, "feedback": "【正解】最期まで誇り高き姿、感服いたしました。"}, {"text": "「戸を強くしめ、内よりかんぬきをさして、眠りおはす」", "correct": False, "feedback": "【失敗】眠る場面ではございませぬ。"}, {"text": "「戸を強くしめ、内よりかんぬきをさして、まどひ給ふ」", "correct": False, "feedback": "【失敗】義経公は惑いません。"}, {"text": "「戸を強くしめ、内よりかんぬきをさして、逃げおはします」", "correct": False, "feedback": "【失敗】逃げる道は残されておりませぬ。"}]}
 ]
 
 # --- 6. 画面進行 ---
@@ -116,23 +118,83 @@ elif st.session_state.app_mode == 'game':
     if os.path.exists(img_path): st.image(img_path, width=700)
 
     if not st.session_state.answered:
+        # ヒント機能
+        if st.button("💡 ヒントを見る"):
+            st.session_state.show_hint = True
+        if st.session_state.get('show_hint', False):
+            st.info(f"【ヒント】 {scene['hint']}")
+
         choice = st.radio("👇 適切な言の葉を選びなさい:", [o['text'] for o in st.session_state.current_options], index=None)
+        
         if st.button("伝える"):
             if choice:
                 st.session_state.results.append(time.perf_counter() - st.session_state.stage_start_time)
                 sel = next(o for o in st.session_state.current_options if o['text'] == choice)
-                if 'correct_count' not in st.session_state: st.session_state['correct_count'] = 0
-                if sel['correct']: st.session_state['correct_count'] += 1
+                
+                # 正誤判定とカウント
+                if sel['correct']: 
+                    st.session_state['correct_count'] += 1
+                    st.session_state['continuous_wrong'] = 0
+                else:
+                    st.session_state['wrong_count'] += 1
+                    st.session_state['continuous_wrong'] += 1
+
                 st.session_state.update({'answered': True, 'last_correct': sel['correct'], 'last_feedback': sel['feedback']})
                 inject_result_animation(sel['correct']); st.rerun()
     else:
         if st.session_state.last_correct: st.success(st.session_state.last_feedback)
         else: st.error(st.session_state.last_feedback)
+        
         if st.button("次へ"):
-            if st.session_state.stage < 9:
+            st.session_state.show_hint = False # 次の問題でヒントをリセット
+            current_q = st.session_state.stage + 1
+            
+            # --- エンディング分岐判定 ---
+            if st.session_state.continuous_wrong >= 2:
+                st.session_state.ending_type = 1 # 2問連続で間違える
+                st.session_state.app_mode = 'ending'
+            elif current_q <= 5 and st.session_state.wrong_count >= 2:
+                st.session_state.ending_type = 2 # 5問目以内で2問以上間違える
+                st.session_state.app_mode = 'ending'
+            elif current_q <= 8 and st.session_state.wrong_count >= 2:
+                st.session_state.ending_type = 3 # 8問目以内で2問以上間違える
+                st.session_state.app_mode = 'ending'
+            elif current_q == 10:
+                if st.session_state.wrong_count >= 1:
+                    st.session_state.ending_type = 4 # 10問目で1問以上間違えている
+                else:
+                    st.session_state.ending_type = 5 # 全問正解
+                st.session_state.app_mode = 'ending'
+            else:
                 st.session_state.update({'stage': st.session_state.stage+1, 'answered': False, 'current_options': [], 'stage_start_time': time.perf_counter()})
-            else: st.session_state.app_mode = 'post_mapping'
             st.rerun()
+
+# エンディング画面
+elif st.session_state.app_mode == 'ending':
+    st.title("📜 物語の結末")
+    
+    if st.session_state.ending_type == 1:
+        st.header("【終幕】 無念の連敗")
+        st.error("2問連続で判断を誤ってしまった…。義経の歩みはここで途絶え、歴史の波に飲まれてしまった。")
+    elif st.session_state.ending_type == 2:
+        st.header("【終幕】 早すぎる挫折")
+        st.error("序盤で多くの痛手を負いすぎた…。これ以上の進軍は不可能と判断し、無念の撤退となった。")
+    elif st.session_state.ending_type == 3:
+        st.header("【終幕】 道半ばの無念")
+        st.warning("数々の苦難を越えてきたが、あと一歩及ばず…。義経の伝説は未完のまま語り継がれることとなった。")
+    elif st.session_state.ending_type == 4:
+        st.header("【終幕】 歴史の影に")
+        st.info("最後まで戦い抜いたが、いくつか判断を誤り、思い描いた完璧な伝説とはならなかった。それでも君の健闘は称えられよう。")
+    elif st.session_state.ending_type == 5:
+        st.balloons()
+        st.header("【終幕】 極雅の英雄")
+        st.success("見事、全ての選択を正解した！義経の伝説は完璧な形で後世に語り継がれるだろう！これぞ極雅なり！")
+
+    st.markdown("---")
+    st.write("ここまで遊んでくれてありがとう！最後に事後アンケートに答えてね。")
+    if st.button("📝 事後調査へ進む"):
+        st.session_state.app_mode = 'post_mapping'
+        st.rerun()
 
 # 事後調査
 elif st.session_state.app_mode == 'post_mapping':
@@ -152,14 +214,15 @@ elif st.session_state.app_mode == 'post_mapping':
 
 # 完了画面（スクショ用）
 elif st.session_state.app_mode == 'complete':
-    st.balloons()
+    if st.session_state.ending_type == 5:
+        st.balloons()
     st.warning("📸 **【重要】この画面をスクリーンショットして、研究者へ送ってください！**")
-    st.header("🎊 義経伝、読了")
+    st.header("🎊 義経伝、調査完了")
     
     st.markdown("---")
     st.subheader("📊 旅の結果報告")
     score = st.session_state.get('correct_count', 0)
-    st.metric(label="合計正解数", value=f"{score} / 10")
+    st.metric(label="合計正解数", value=f"{score}問 正解")
 
     # 前後比較の表示
     st.write("### 📈 アンケート結果の比較 (左: 事前 → 右: 事後)")
@@ -196,7 +259,7 @@ elif st.session_state.app_mode == 'complete':
                 **st.session_state.post_ratings, 
                 **st.session_state.post_likert, 
                 "ログ": str(st.session_state.results),
-                "改善点": st.session_state.post_feedback_text # 列名「改善点」がシートにある前提
+                "改善点": st.session_state.post_feedback_text 
             })
             new_df = pd.DataFrame([pre_dict, post_dict])[cols]
             conn.update(worksheet="Sheet1", data=pd.concat([existing_df, new_df], ignore_index=True))
